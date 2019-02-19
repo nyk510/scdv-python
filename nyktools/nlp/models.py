@@ -4,12 +4,16 @@
 import os
 import subprocess
 
-from nyktools.utils import download_from_gdrive
+import gensim
+
+from nyktools.utils import download_from_gdrive, get_logger
 
 __author__ = "nyk510"
 
+logger = get_logger(__name__)
 
-def download_ja_w2v_model(to='/data/models/'):
+
+def ja_w2v_model(to='/data/models/'):
     """
     日本語の訓練済み Word2Vec モデルを download する
     Args:
@@ -23,7 +27,12 @@ def download_ja_w2v_model(to='/data/models/'):
 
     if not os.path.exists(dl_path):
         download_from_gdrive('0ByFQ96A4DgSPUm9wVWRLdm5qbmc', destination=dl_path)
+        subprocess.run(['unzip', dl_path, '-d', to, '-y'])
     else:
         print('model already exist')
 
-    subprocess.run(['unzip', dl_path, '-d', to])
+    logger.info('start loading W2V Model...')
+    model_path = os.path.join(to, 'model.vec')
+    m = gensim.models.KeyedVectors.load_word2vec_format(model_path, binary=False)
+    logger.info('finished')
+    return m
