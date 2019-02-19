@@ -86,6 +86,20 @@ def create_document_vector(documents, word_vocab, word_topic_vector):
     return np.array(doc_vecs)
 
 
+def compress_document_vector(doc_vector, p=.04):
+    v = np.copy(doc_vector)
+    vec_norm = np.linalg.norm(v, axis=1)
+    # zero divide しないように
+    vec_norm = np.where(vec_norm > 0, vec_norm, 1.)
+    v /= vec_norm[:, None]
+
+    a_min = v.min(axis=1).mean()
+    a_max = v.max(axis=1).mean()
+    threshold = (abs(a_min) + abs(a_max)) / 2. * p
+    v[abs(v) < threshold] = .0
+    return v
+
+
 def get_arguments():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('-c', '--components', default=60, type=int, help='GMM component size (i.e. latent space size.)')
@@ -136,6 +150,7 @@ def main():
 
     # NOTE: この merge 後の dataframe に idf = np.nan のデータがいくつか含まれる(だいたい5000ぐらい)
     # use_word は parsed_doc に現れる word の一部なのでこれはおかしい. 調査が必要.
+    # tfidf transformer の使い方があやしい
     df_use[df_use.isnull()].to_csv(os.path.join(setting.PROCESSED_ROOT, 'idf_has_null.csv'))
 
     # topic vector を計算するときに concatenation するとあるが
@@ -152,6 +167,9 @@ def main():
 
     document_vector = create_document_vector(parsed_docs, use_words, word_topic_vector)
     np.save(os.path.join(output_dir, 'raw_document_vector.npy'), document_vector)
+
+    compressed = compress_document_vector(document_vector)
+    np.save(os.path.join(output_dir, 'compressed_document_vector.npy'), compressed)
 
 
 if __name__ == '__main__':
