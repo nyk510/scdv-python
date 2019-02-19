@@ -1,0 +1,20 @@
+version: "2.3"
+services:
+  jupyter:
+    build:
+      context: ./
+      dockerfile: ./docker/jupyter/Dockerfile
+    image: all-in-one
+    container_name: scdv-jupyter
+    ports:
+      - ${JUPYTER_PORT}:8888
+    volumes:
+      # data dir
+      - ${DATA_DIR}:/data
+      - ./:/working
+    environment:
+      # workingdir に python の path を通すことで
+      # プロジェクトルートに配置した自作のモジュールを import できるようにしている
+      - PYTHONPATH=/working
+    env_file:
+      - .env

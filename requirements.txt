@@ -1,0 +1,18 @@
+jupyter
+notebook
+tqdm
+matplotlib
+numpy
+scipy
+scikit-learn
+pandas
+numba
+xgboost
+opencv-python
+seaborn
+lightgbm
+pandas-profiling
+
+# NLP Tools
+mecab-python3
+gensim
