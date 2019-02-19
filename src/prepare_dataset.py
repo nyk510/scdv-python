@@ -1,5 +1,6 @@
 # coding: utf-8
-"""
+"""ライブドアコーパスから分かち書きされた文章を作成する.
+分かち書き結果は pickle して保存されます.
 """
 import os
 import pickle
@@ -18,6 +19,17 @@ logger = get_logger(__name__)
 
 class DocumentParser(object):
     def __init__(self, stopper=None, as_normed=True):
+        """
+
+        Args:
+            stopper(Stopper | None):
+                stop word を拡張した Stopper instance.
+                分かち書き結果に含めたくない単語などが有る場合, stopper クラスを渡す.
+                特に指定がない場合すべての単語を分かち書き結果に含める.
+            as_normed(bool):
+                True のとき原型を分かち書きとして返す.
+        """
+
         self.tagger = MeCab.Tagger('-Ochasen')
 
         if stopper is None:
@@ -27,11 +39,12 @@ class DocumentParser(object):
 
     def get_word(self, ocha):
         """
+        Ochasen でわけられた OchasenLine から単語を取得する
 
         Args:
             ocha(OchasenLine):
 
-        Returns:
+        Returns(str):
 
         """
         if self.as_normed:
@@ -45,7 +58,7 @@ class DocumentParser(object):
         Args:
             ocha(OchasenLine):
 
-        Returns:
+        Returns(bool):
 
         """
         if self.stopper is None:
