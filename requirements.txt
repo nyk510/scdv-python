@@ -11,6 +11,7 @@ xgboost
 opencv-python
 seaborn
 lightgbm
+joblib
 pandas-profiling
 
 # NLP Tools
