@@ -7,7 +7,6 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 import numpy as np
 import pandas as pd
-from sklearn.externals import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.mixture import GaussianMixture
 from tqdm import tqdm
@@ -60,7 +59,7 @@ def create_document_vector(documents, word_vocab, word_topic_vector):
     すなわち i 番目の word_vocab に対応するベクトルが word_topic_vector[i] に相当します.
 
     Args:
-        documents(list[List[list[str]]):
+        documents(list[list[str]]):
         word_vocab(list[str]):
         word_topic_vector(np.ndarray):
 
