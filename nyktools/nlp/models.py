@@ -26,6 +26,7 @@ def ja_w2v_model(to='/data/models/'):
     dl_path = os.path.join(to, '{}.zip'.format(file_name))
 
     if not os.path.exists(dl_path):
+        os.makedirs(to, exist_ok=True)
         download_from_gdrive('0ByFQ96A4DgSPUm9wVWRLdm5qbmc', destination=dl_path)
         subprocess.run(['unzip', dl_path, '-d', to, '-y'])
     else:
