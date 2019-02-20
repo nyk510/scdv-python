@@ -2,14 +2,13 @@
 """
 """
 
+from logging import getLogger, StreamHandler, FileHandler, Formatter
+from time import time
+
 import numpy as np
-import pandas as pd
 import requests
 import seaborn as sns
-from logging import getLogger, StreamHandler, FileHandler, Formatter
 from tqdm import tqdm
-
-from . import setting
 
 
 def set_default_style(style='ticks', font='Noto Sans CJK JP'):
@@ -25,17 +24,6 @@ def set_default_style(style='ticks', font='Noto Sans CJK JP'):
 
     """
     sns.set(style=style, font=font)
-
-
-def read_raw_feature(test=False):
-    if test:
-        fpath = setting.TEST_META
-    else:
-        fpath = setting.TRAIN_META
-
-    df = pd.read_csv(fpath)
-    df = df.drop(columns=['y'], errors='ignore')
-    return df
 
 
 def get_logger(name, log_level="DEBUG", output_file=None, handler_level="INFO"):
@@ -132,3 +120,23 @@ def save_response_content(response, destination):
             f.write(chunk)
     logger.info("Finish!!")
     logger.info("Save to:{}".format(destination))
+
+
+def stopwatch(func):
+    """
+    実行時間を計測する decorator
+    Args:
+        func:
+
+    Returns:
+
+    """
+
+    def inner(*args, **kwargs):
+        start = time()
+        res = func(*args, **kwargs)
+        diff = time() - start
+        print('[{}] time: {:.3f}[s]'.format(func.__name__, diff))
+        return res
+
+    return inner
