@@ -12,7 +12,7 @@ from nyktools import setting
 from nyktools.nlp.preprocess import normalize_neologd
 from nyktools.nlp.preprocess.models import OchasenLine
 from nyktools.nlp.preprocess.wakati import Stopper
-from nyktools.utils import get_logger
+from nyktools.utils import get_logger, stopwatch
 
 logger = get_logger(__name__)
 
@@ -77,12 +77,13 @@ class DocumentParser(object):
             list[str]
         """
         s = normalize_neologd(sentence)
+        s = s.lower()
         lines = self.tagger.parse(s).splitlines()[:-1]
         ocha_lines = [OchasenLine(l) for l in lines]
 
         return [self.get_word(ocha) for ocha in ocha_lines if self.is_valid_line(ocha)]
 
-
+@stopwatch
 def create_parsed_document():
     docs = []
 
