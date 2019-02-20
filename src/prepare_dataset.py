@@ -89,7 +89,7 @@ def create_parsed_document():
     def trim_top_lines(d):
         return '\n'.join(d.split('\n')[2:])
 
-    for p in glob('/data/text/*/*.txt'):
+    for p in glob('/data/livedoor/text/*/*.txt'):
         with open(p) as f:
             s = f.read()
             s = trim_top_lines(s)
