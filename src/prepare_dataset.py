@@ -28,6 +28,8 @@ class DocumentParser(object):
                 特に指定がない場合すべての単語を分かち書き結果に含める.
             as_normed(bool):
                 True のとき原型を分かち書きとして返す.
+                ex.) 買えそう -> 買う, そう
+                文章の意味解析の場合活用はあまり考慮する必要が無いため指定すると吉
         """
 
         self.tagger = MeCab.Tagger('-Ochasen')
@@ -77,11 +79,13 @@ class DocumentParser(object):
             list[str]
         """
         s = normalize_neologd(sentence)
+        # 文字列への事前処理を pytorch の compose っぽく書きたい
         s = s.lower()
         lines = self.tagger.parse(s).splitlines()[:-1]
         ocha_lines = [OchasenLine(l) for l in lines]
 
         return [self.get_word(ocha) for ocha in ocha_lines if self.is_valid_line(ocha)]
+
 
 @stopwatch
 def create_parsed_document():
@@ -90,7 +94,7 @@ def create_parsed_document():
     def trim_top_lines(d):
         return '\n'.join(d.split('\n')[2:])
 
-    for p in glob('/data/livedoor/text/*/*.txt'):
+    for p in glob('/score_data/livedoor/text/*/*.txt'):
         with open(p) as f:
             s = f.read()
             s = trim_top_lines(s)
@@ -99,7 +103,6 @@ def create_parsed_document():
     parser = DocumentParser(stopper=Stopper(stop_hinshi='contents'))
     parsed_docs = [parser.call(s) for s in docs]
 
-    # 英数字の lower などやってない. あとで直す
     return parsed_docs
 
 
