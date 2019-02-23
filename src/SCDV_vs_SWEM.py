@@ -2,9 +2,7 @@
 # coding: utf-8
 
 import os
-import pickle
 from collections import OrderedDict
-from glob import glob
 
 import lightgbm as lgbm
 import matplotlib.pyplot as plt
@@ -17,20 +15,14 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 from tqdm import tqdm
 
-from nyktools import setting
-from nyktools.nlp.models import ja_w2v_model
+from nyktools.nlp.applications import ja_word_vector
+from nyktools.nlp.dataset import livedoor_news
+from nyktools.nlp.preprocess import Stopper, DocumentParser
 from nyktools.utils import get_logger, set_default_style, stopwatch
 
 logger = get_logger(__name__)
 
-
-def load_parsed_document():
-    with open(os.path.join(setting.FEATURE_DIR, 'parsed_docs.pkl'), 'rb') as f:
-        doc = pickle.load(f)
-    return doc
-
-
-w2v_model = ja_w2v_model()
+w2v_model = ja_word_vector()
 
 
 def convert_to_wv(w):
@@ -147,26 +139,22 @@ def train_lgbm(feature, categorical_target):
 
 
 def main():
+    docs, target = livedoor_news()
+    parser = DocumentParser(stopper=Stopper(stop_hinshi='contents'))
+    parsed_docs = [parser.call(s) for s in docs]
     label_encoder = LabelEncoder()
-
-    target = []
-    for p in glob('/data/livedoor/text/*/*.txt'):
-        target.append(p.split('/')[-2])
-    target = np.array(target)
-
     categorical_target = label_encoder.fit_transform(target)
 
     # 特徴量を集める
     use_dataset = OrderedDict()
-    parsed_doc = load_parsed_document()
 
     # Simple Word Embedding Model
     for agg in ['mean', 'max']:
-        use_dataset['swem_{}'.format(agg)] = create_swem(parsed_doc, agg)
+        use_dataset['swem_{}'.format(agg)] = create_swem(parsed_docs, agg)
 
     # N-Gram SWEM
     for n in [3, 5, 8]:
-        use_dataset['n={}_gram_swem'.format(n)] = create_n_gram_feature(parsed_doc, n)
+        use_dataset['n={}_gram_swem'.format(n)] = create_n_gram_feature(parsed_docs, n)
 
     # SCDV
     scdv = np.load('/data/processed/compressed_document_vector.npy')
