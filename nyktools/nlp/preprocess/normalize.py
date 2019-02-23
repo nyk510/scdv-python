@@ -79,8 +79,8 @@ def normalize_neologd(doc):
     doc = re.sub('[﹣－ｰ—―─━ー]+', 'ー', doc)  # normalize choonpus
     doc = re.sub('[~∼∾〜〰～]', '', doc)  # remove tildes
     doc = doc.translate(
-        maketrans('!"#$%&\'()*+,-./:;<=>?@[¥]^_`{|}~｡､･｢｣『』',
-                  '！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［￥］＾＿｀｛｜｝〜。、・「」「」'))
+        maketrans('!"#$%&\'()*+,-./:;<=>?@[¥]^_`{|}~｡､･「」「」',
+                  '！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［￥］＾＿｀｛｜｝〜。、・「」『』'))
 
     doc = remove_extra_spaces(doc)
     doc = unicode_normalize('！”＃＄％＆’（）＊＋，－．／：；＜＞？＠［￥］＾＿｀｛｜｝〜', doc)  # keep ＝,・,「,」

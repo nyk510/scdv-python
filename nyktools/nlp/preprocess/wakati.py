@@ -6,11 +6,11 @@
 
 __author__ = "yamaguchi"
 
-import re
-
 import MeCab
 
-from .constants import HINSHI_FOR_CONTENTS, WORDS_FOR_CONTENTS, HANKAKU_PATTARN
+from .constants import HINSHI_FOR_CONTENTS, WORDS_FOR_CONTENTS
+from .models import OchasenLine
+from .normalize import normalize_neologd
 
 
 class Stopper(object):
@@ -98,94 +98,78 @@ class Stopper(object):
         return True
 
 
-class Wakati(object):
-    """
-    MeCabを用いて分かち書きを行うクラス.
-    """
-
-    def __init__(self,
-                 stoper,
-                 tagger_type='-Ochasen',
-                 do_remove_hankakusign=True):
+class DocumentParser(object):
+    def __init__(self, stopper=None, as_normed=True):
         """
-        分かち書きを行うクラスのインスタンス
 
         Args:
-            stoper (instance of Discriminator)
-            tagger_type (args of mecab tagger)
-                `MeCab.Tager`インスタンス作成時の引数
-            do_remove_hankaku_signs (boolean)
-                半角記号を取り除くフラグ
+            stopper(Stopper | None):
+                stop word を拡張した Stopper instance.
+                分かち書き結果に含めたくない単語などが有る場合, stopper クラスを渡す.
+                特に指定がない場合すべての単語を分かち書き結果に含める.
+            as_normed(bool):
+                True のとき原型を分かち書きとして返す.
+                文章の意味解析の場合活用はあまり考慮する必要が無いため指定すると吉
+
+        Examples:
+            In [2]: parser = DocumentParser()
+
+            In [3]: s = '買えそう'
+
+            In [4]: parser.call(s)
+            Out[4]: ['買える', 'そう']
         """
 
-        self.stoper = stoper
-        self.do_remove_hankakusign = do_remove_hankakusign
-        self.tagger_type = tagger_type
-        self.tagger = MeCab.Tagger(tagger_type)
+        self.tagger = MeCab.Tagger('-Ochasen')
 
-        # python3のmecabはそのままparseを呼び出すとはじめ空文字をかえすバグが有る
-        # それを修正するための慣用句
-        self.tagger.parse("")
+        if stopper is None:
+            stopper = Stopper()
+        self.stopper = stopper
+        self.as_normed = as_normed
 
-    def _remove_hankaku_sign(self, sentence):
+    def get_word(self, ocha):
         """
-        文章中の記号を除去
-        todo: 今は半角記号しか対応できていないので直す
+        Ochasen でわけられた OchasenLine から単語を取得する
 
         Args:
-            sentence (string)
+            ocha(OchasenLine):
+
+        Returns(str):
+
+        """
+        if self.as_normed:
+            return ocha.norm_word
+        else:
+            return ocha.word
+
+    def is_valid_line(self, ocha):
+        """
+
+        Args:
+            ocha(OchasenLine):
+
+        Returns(bool):
+
+        """
+        if self.stopper is None:
+            return ocha.can_parse
+
+        return ocha.can_parse and self.stopper(ocha.norm_word, ocha.hinshi_class)
+
+    def call(self, sentence):
+        """
+        文章の文字列を受け取り分かち書きされた list を返す
+
+        Args:
+            sentence(str):
 
         Returns:
-            string
+            list[str]
         """
+        s = normalize_neologd(sentence)
+        # 文字列への事前処理を pytorch の compose っぽく書きたい
+        s = s.lower()
+        lines = self.tagger.parse(s).splitlines()[:-1]
+        ocha_lines = [OchasenLine(l) for l in lines]
 
-        subed_sentence = re.sub(HANKAKU_PATTARN, "", sentence)
-        return subed_sentence
-
-    def parse(self, sentence):
-        """
-        文章を単語(token)のリストに分解
-
-        Args:
-            sentence (string)
-
-        Returns:
-            list of words
-        """
-        return self.parse2word_and_class(sentence, hinshi_depth=0)
-
-    def parse2word_and_class(self, sentence, hinshi_depth=2):
-        """
-        文章を単語(word)と品詞(word_class)のタプルのリストに分解します。
-
-        Args:
-            sentence (string)
-                分かち書きする文章
-            stoper (a Discriminator class instance)
-            hinshi_depth (int)
-                品詞分解をどれだけ深く探索するか。
-                デフォルト値の2では二段階の探索を行い, 品詞, 品詞小分類1をword_classとして返す
-
-        Returns:
-            list of tupple [word, word_class].
-        """
-        if self.do_remove_hankakusign:
-            sentence = self._remove_hankaku_sign(sentence)
-
-        parsed_doc = []
-        node = self.tagger.parseToNode(sentence)
-        while node:
-            if node.prev is None:
-                node = node.next
-                continue
-            before_s = node.prev.surface
-            after_s = node.surface
-            word = before_s[:-len(after_s)]
-            wclass = node.feature.split(",")
-            if wclass[0] != "BOS/EOS" and self.stoper(word, wclass):
-                if hinshi_depth == 0:
-                    parsed_doc.append(word)
-                else:
-                    parsed_doc.append([word, wclass[0:hinshi_depth]])
-            node = node.next
-        return parsed_doc
+        return [self.get_word(ocha) for ocha in ocha_lines if self.is_valid_line(ocha)]
