@@ -87,15 +87,14 @@ python src/SCDV_vs_SWEM.py
 
 ### Settings
 
-* Embedding Model: pretrained fasttext [https://qiita.com/Hironsan/items/513b9f93752ecee9e670](https://qiita.com/Hironsan/items/513b9f93752ecee9e670)
+* Embedding Model: pretrained fasttext [https://qiita.com/Hironsan/items/513b9f93752ecee9e670](https://qiita.com/Hironsan/items/513b9f93752ecee9e670) :pray:
   * Embedding dim: 300
 * Gaussian Mixture Clusters: 60
 * Features
   * SCDV
   * SCDV without compress
   * Compressed SCDV by PCA (compressed dim = 100, 300, 500)
-  * SWEM
-    * ([Simple Word Embedding Model](https://arxiv.org/abs/1805.09843) proposed in https://arxiv.org/abs/1805.09843. max-pooling and average-pooling)
+  * SWEM: Simple Word Embedding Model proposed in https://arxiv.org/abs/1805.09843. max-pooling and average-pooling
   * n-gram SWEM (n = 3, 5, 8)
 * Classification Model: LightGBM
   * same parameters for all features
