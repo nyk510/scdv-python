@@ -6,14 +6,9 @@ numpy
 scipy
 scikit-learn
 pandas
-numba
-xgboost
-opencv-python
 seaborn
 lightgbm
 joblib
-pandas-profiling
-
 # NLP Tools
 mecab-python3
 gensim
