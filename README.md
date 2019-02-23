@@ -60,7 +60,7 @@ ERROR: for scdv-jupyter  Cannot start service jupyter: driver failed programming
 
 , change .env `JUPYTER_PORT` number.
 
-## Create SCDV
+## Create Feature
 
 Create SCDV feature using [livedoor corpus](https://www.rondhuit.com/download/ldcc-20140209.tar.gz).
 
@@ -75,19 +75,19 @@ optional arguments:
                         60))
 ```
 
-## BenchMark
+## Benchmark
 
-Multilabel classfilication task using livedoor corpus.
+Benchmark on Multilabel classfilication task using livedoor corpus.
 
 ```bash
 python src/SCDV_vs_SWEM.py
 ```
 
-### Sample Result
+> NOTO: run train.py before
 
-#### Settings
+### Settings
 
-* embedding model: pretrained fasttext [https://qiita.com/Hironsan/items/513b9f93752ecee9e670](https://qiita.com/Hironsan/items/513b9f93752ecee9e670)
+* Embedding Model: pretrained fasttext [https://qiita.com/Hironsan/items/513b9f93752ecee9e670](https://qiita.com/Hironsan/items/513b9f93752ecee9e670)
   * Embedding dim: 300
 * Gaussian Mixture Clusters: 60
 * Features
@@ -99,12 +99,22 @@ python src/SCDV_vs_SWEM.py
   * n-gram SWEM (n = 3, 5, 8)
 * Classification Model: LightGBM
   * same parameters for all features
+* Train and Evaluation
+  * With stratified 5-fold, train and predict for each folds, create Out of Fold predict
+
+### TODO
+
+* [ ] LightGBM parameter tuning
+* [ ] train by other models. (CNN, LSTM, SVM, ...)
+
+### Result
 
 ![](report/scdv_vs_swem_result.png)
 
 * SCDV (not comporessed) work well
   * computation cost: SWEM << SCDV (calculate Gaussian Mixture)
   * Accuracy: SWEM < SCDV
+
 
 ## Similarity Search
 
