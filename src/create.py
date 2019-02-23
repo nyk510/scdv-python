@@ -1,5 +1,5 @@
 # coding: utf-8
-"""Create SCDV at livedoor corpus dataset
+"""Create SCDV using livedoor corpus dataset
 """
 import os
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
@@ -93,7 +93,7 @@ def compress_document_vector(doc_vector, p=.04):
 
 
 def get_arguments():
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter, usage=__doc__)
     parser.add_argument('-c', '--components', default=60, type=int, help='GMM component size (i.e. latent space size.)')
     return parser.parse_args()
 
