@@ -16,5 +16,6 @@ services:
       # workingdir に python の path を通すことで
       # プロジェクトルートに配置した自作のモジュールを import できるようにしている
       - PYTHONPATH=/working
+      - DATA_DIR=/data
     env_file:
       - .env
