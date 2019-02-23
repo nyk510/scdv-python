@@ -62,7 +62,7 @@ ERROR: for scdv-jupyter  Cannot start service jupyter: driver failed programming
 
 ## Create SCDV
 
-Create SCDV feature at [livedoor corpus](https://www.rondhuit.com/download/ldcc-20140209.tar.gz).
+Create SCDV feature using [livedoor corpus](https://www.rondhuit.com/download/ldcc-20140209.tar.gz).
 
 ```bash
 $ python src/train.py -h
@@ -77,7 +77,7 @@ optional arguments:
 
 ## BenchMark
 
-Multilabel classfilication task for livedoor corpus.
+Multilabel classfilication task using livedoor corpus.
 
 ```bash
 python src/SCDV_vs_SWEM.py
