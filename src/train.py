@@ -1,89 +1,81 @@
 # coding: utf-8
-"""
+"""Create SCDV at livedoor corpus dataset
 """
 import os
-import pickle
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.mixture import GaussianMixture
-from tqdm import tqdm
 
 from nyktools import setting
-from nyktools.nlp.models import ja_w2v_model
-from nyktools.utils import get_logger
+from nyktools.nlp.applications import ja_word_vector
+from nyktools.nlp.dataset import livedoor_news
+from nyktools.nlp.preprocess import Stopper, DocumentParser
+from nyktools.utils import get_logger, stopwatch
 
 __author__ = "nyk510"
 
 logger = get_logger(__name__)
 
 
-def load_parsed_document():
-    with open(os.path.join(setting.FEATURE_DIR, 'parsed_docs.pkl'), 'rb') as f:
-        doc = pickle.load(f)
-    return doc
+@stopwatch
+def create_parsed_document(docs):
+    parser = DocumentParser(stopper=Stopper(stop_hinshi='contents'))
+    parsed_docs = [parser.call(s) for s in docs]
+    return parsed_docs
 
 
-def create_idf_dataframe(documents, parsed=True):
+def create_idf_dataframe(documents):
     """
 
     Args:
-        documents(List[List[str]] | List[str]):
-        parsed(bool):
-
+        documents(list[str]):
     Returns(pd.DataFrame):
 
     """
-    transformer = TfidfVectorizer()
 
-    if parsed:
-        raw_docs = [' '.join(d) for d in documents]
-    else:
-        raw_docs = documents
+    d = defaultdict(int)
 
-    transformer.fit(raw_docs)
+    for doc in documents:
+        vocab_i = set(doc)
+        for w in list(vocab_i):
+            d[w] += 1
+
     df_idf = pd.DataFrame()
-    df_idf['word'] = transformer.get_feature_names()
-    df_idf['idf'] = transformer.idf_
+    df_idf['count'] = d.values()
+    df_idf['word'] = d.keys()
+    df_idf['idf'] = np.log(len(documents) / df_idf['count'])
     return df_idf
 
 
-def create_document_vector(documents, word_vocab, word_topic_vector):
+def create_document_vector(documents, w2t, n_embedding):
     """
     学習済みの word topic vector と分かち書き済みの文章, 使用されている単語から
     文章ベクトルを作成するメソッド.
 
-    word_vocab は word topic vector と対応関係に有るひつようがあります.
-    すなわち i 番目の word_vocab に対応するベクトルが word_topic_vector[i] に相当します.
-
     Args:
         documents(list[list[str]]):
-        word_vocab(list[str]):
-        word_topic_vector(np.ndarray):
+        w2t(dict): 単語 -> 埋め込み次元の dict
+        n_embedding(int):
 
     Returns:
+        embedded document vector
 
     """
-    assert len(word_vocab) == word_topic_vector.shape[0]
+    doc_vectors = []
 
-    def create_doc_vector(doc):
-        vec = np.zeros_like(word_topic_vector[0])
-
+    for doc in documents:
+        vector_i = np.zeros(shape=(n_embedding,))
         for w in doc:
             try:
-                idx = word_vocab.index(w)
-                v_i = word_topic_vector[idx]
-                vec += v_i
-            except Exception:
+                v = w2t[w]
+                vector_i += v
+            except KeyError:
                 continue
-        return vec
-
-    doc_vecs = []
-    for doc in tqdm(documents, total=len(documents)):
-        doc_vecs.append(create_doc_vector(doc))
-    return np.array(doc_vecs)
+        doc_vectors.append(vector_i)
+    return np.array(doc_vectors)
 
 
 def compress_document_vector(doc_vector, p=.04):
@@ -109,15 +101,18 @@ def get_arguments():
 def main():
     args = vars(get_arguments())
 
-    w2v_model = ja_w2v_model()
+    word_vec = ja_word_vector()
 
     output_dir = os.path.join(setting.PROCESSED_ROOT)
-    n_wv_embed = w2v_model.vector_size
+    n_wv_embed = word_vec.vector_size
     n_components = args['components']
     logger.info('w2v embed:{}\tGMM components:{}'.format(n_wv_embed, n_components))
 
-    parsed_docs = load_parsed_document()
-    vocab_model = set(k for k in w2v_model.vocab.keys())
+    docs, _ = livedoor_news()
+    parsed_docs = create_parsed_document(docs)
+
+    # w2v model と corpus の語彙集合を作成
+    vocab_model = set(k for k in word_vec.vocab.keys())
     vocab_docs = set([w for doc in parsed_docs for w in doc])
     out_of_vocabs = len(vocab_docs) - len(vocab_docs & vocab_model)
     print('out of vocabs: {out_of_vocabs}'.format(**locals()))
@@ -126,10 +121,11 @@ def main():
     use_words = list(vocab_docs & vocab_model)
 
     # 使う単語分だけ word vector を取得. よって shape = (n_vocabs, n_wv_embed,)
-    use_word_vectors = np.array([w2v_model[w] for w in use_words])
+    use_word_vectors = np.array([word_vec[w] for w in use_words])
 
     # 公式実装: https://github.com/dheeraj7596/SCDV/blob/master/20news/SCDV.py#L32 により tied で学習
     # 共分散行列全部推定する必要が有るほど低次元ではないという判断?
+    # -> 多分各クラスの分散を共通化することで各クラスに所属するデータ数を揃えたいとうのがお気持ちっぽい
     clf = GaussianMixture(n_components=n_components, covariance_type='tied', verbose=2)
     clf.fit(use_word_vectors)
 
@@ -144,31 +140,26 @@ def main():
     # 使用している単語の idf を取得
     df_use = pd.DataFrame()
     df_use['word'] = use_words
-    df_idf = create_idf_dataframe(parsed_docs, parsed=True)
+    df_idf = create_idf_dataframe(parsed_docs)
     df_use = pd.merge(df_use, df_idf, on='word', how='left')
     idf = df_use['idf'].values
 
-    # NOTE: この merge 後の dataframe に idf = np.nan のデータがいくつか含まれる(だいたい5000ぐらい)
-    # use_word は parsed_doc に現れる word の一部なのでこれはおかしい. 調査が必要.
-    # tfidf transformer の使い方があやしい
-    df_use[df_use.isnull()].to_csv(os.path.join(setting.PROCESSED_ROOT, 'idf_has_null.csv'))
-
     # topic vector を計算するときに concatenation するとあるが
     # 単に 二次元のベクトルに変形して各 vocab に対して idf をかければ OK
-    word_topic_vector = word_cluster_vector.reshape(-1, n_components * n_wv_embed) * idf[:, None]
+    topic_vector = word_cluster_vector.reshape(-1, n_components * n_wv_embed) * idf[:, None]
+    # nanで影響が出ないように 0 で埋める
+    topic_vector[np.isnan(topic_vector)] = 0
+    word_to_topic = dict(zip(use_words, topic_vector))
 
-    # nan になっている部分は idf 計算で nan が出現したもの
-    # 一旦影響が出ないように 0 で埋める
-    word_topic_vector[np.isnan(word_topic_vector)] = 0
+    np.save(os.path.join(output_dir, 'word_topic_vector.npy'), topic_vector)
 
-    np.save(os.path.join(output_dir, 'word_topic_vector.npy'), word_topic_vector)
+    topic_vector = np.load(os.path.join(output_dir, 'word_topic_vector.npy'))
+    n_embedding = topic_vector.shape[1]
 
-    word_topic_vector = np.load(os.path.join(output_dir, 'word_topic_vector.npy'))
+    cdv_vector = create_document_vector(parsed_docs, word_to_topic, n_embedding)
+    np.save(os.path.join(output_dir, 'raw_document_vector.npy'), cdv_vector)
 
-    document_vector = create_document_vector(parsed_docs, use_words, word_topic_vector)
-    np.save(os.path.join(output_dir, 'raw_document_vector.npy'), document_vector)
-
-    compressed = compress_document_vector(document_vector)
+    compressed = compress_document_vector(cdv_vector)
     np.save(os.path.join(output_dir, 'compressed_document_vector.npy'), compressed)
 
 
