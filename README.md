@@ -2,6 +2,8 @@
 
 Sparse Composite Document Vectors python Implementation
 
+Paper: [https://arxiv.org/abs/1612.06778](https://arxiv.org/abs/1612.06778)
+
 ## Requirements
 
 In my Dockerfile, use `python==3.5.2`
