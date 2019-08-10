@@ -78,8 +78,7 @@ def create_document_vector(documents, w2t, n_embedding):
     return np.array(doc_vectors)
 
 
-def compress_document_vector(doc_vector, p=.04):
-    v = np.copy(doc_vector)
+def compress_document_vector(v, p=.04):
     vec_norm = np.linalg.norm(v, axis=1)
     # zero divide しないように
     vec_norm = np.where(vec_norm > 0, vec_norm, 1.)
@@ -151,16 +150,15 @@ def main():
     topic_vector[np.isnan(topic_vector)] = 0
     word_to_topic = dict(zip(use_words, topic_vector))
 
-    np.save(os.path.join(output_dir, 'word_topic_vector.npy'), topic_vector)
-
-    topic_vector = np.load(os.path.join(output_dir, 'word_topic_vector.npy'))
+    suffix = 'n={}'.format(n_components)
+    np.save(os.path.join(output_dir, 'word_topic_vector_{}.npy'.format(suffix)), topic_vector)
     n_embedding = topic_vector.shape[1]
 
     cdv_vector = create_document_vector(parsed_docs, word_to_topic, n_embedding)
-    np.save(os.path.join(output_dir, 'raw_document_vector.npy'), cdv_vector)
+    np.save(os.path.join(output_dir, 'raw_document_vector_{}.npy'.format(suffix)), cdv_vector)
 
     compressed = compress_document_vector(cdv_vector)
-    np.save(os.path.join(output_dir, 'compressed_document_vector.npy'), compressed)
+    np.save(os.path.join(output_dir, 'compressed_document_vector_{}.npy'.format(suffix)), compressed)
 
 
 if __name__ == '__main__':
